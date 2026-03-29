@@ -89,6 +89,7 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
+
     const logout = async () => {
         await signOut(auth);
         localStorage.removeItem('token');

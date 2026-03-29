@@ -18,7 +18,7 @@ const Navbar = () => {
     const handleNotificationClick = (notification) => {
         markAsRead(notification._id);
         setShowNotifications(false);
-        if (isEmployer) {
+        if (isEmployer && notification.application?.job?._id) {
             navigate(`/employer/applicants/${notification.application.job._id}`);
         } else {
             navigate('/jobseeker/applications');

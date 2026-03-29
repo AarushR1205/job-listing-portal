@@ -190,8 +190,8 @@ export const updateJob = async (req, res) => {
       return res.status(404).json({ message: 'Job not found' });
     }
 
-    // Check if user is the job owner
-    if (job.employer.toString() !== req.user._id.toString()) {
+    // Check if user is the job owner or an admin
+    if (job.employer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized to update this job' });
     }
 
@@ -240,8 +240,8 @@ export const deleteJob = async (req, res) => {
       return res.status(404).json({ message: 'Job not found' });
     }
 
-    // Check if user is the job owner
-    if (job.employer.toString() !== req.user._id.toString()) {
+    // Check if user is the job owner or an admin
+    if (job.employer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized to delete this job' });
     }
 

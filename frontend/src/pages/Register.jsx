@@ -105,6 +105,7 @@ const Register = () => {
         }
     };
 
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50 py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-md w-full">
@@ -286,6 +287,7 @@ const Register = () => {
                         <FaGoogle className="text-red-500" />
                         <span>Sign up with Google (Fill form first)</span>
                     </button>
+
 
                     <p className="mt-8 text-center text-sm text-gray-600">
                         Already have an account?{' '}
