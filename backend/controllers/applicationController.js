@@ -4,9 +4,6 @@ import Notification from '../models/Notification.js';
 import { calculateATSScore } from '../utils/atsScoring.js';
 import sendEmail from '../utils/sendEmail.js';
 
-// @desc    Apply for a job
-// @route   POST /api/applications
-// @access  Private (Job Seeker only)
 export const applyForJob = async (req, res) => {
   try {
     const { jobId, coverLetter, quizAnswers } = req.body;

@@ -1,31 +1,32 @@
-import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import admin from '../config/firebase.js';
 
-// Generate JWT Token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE
-  });
-};
-
-// @desc    Register user
-// @route   POST /api/auth/register
-// @access  Public
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role, phone, companyName, skills, experience } = req.body;
+    const { idToken, name, role, phone, companyName, skills, experience } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ message: 'Firebase ID Token is required' });
+    }
+
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const email = decoded.email;
+    const firebaseUid = decoded.uid;
 
     // Check if user exists
-    const userExists = await User.findOne({ email });
+    const userExists = await User.findOne({ 
+      $or: [{ email }, { firebaseUid }] 
+    });
+
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ message: 'User already exists in database' });
     }
 
     // Create user object based on role
     const userData = {
       name,
       email,
-      password,
+      firebaseUid,
       role
     };
 
@@ -45,8 +46,7 @@ export const register = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
-        token: generateToken(user._id)
+        role: user.role
       });
     } else {
       res.status(400).json({ message: 'Invalid user data' });
@@ -57,26 +57,34 @@ export const register = async (req, res) => {
   }
 };
 
-// @desc    Login user
+// @desc    Login user (sync profile after Firebase login)
 // @route   POST /api/auth/login
 // @access  Public
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { idToken } = req.body;
 
+    if (!idToken) {
+      return res.status(400).json({ message: 'Firebase ID Token is required' });
+    }
+
+    // Verify token with Firebase Admin
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    
     // Check for user
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ 
+      $or: [{ firebaseUid: decoded.uid }, { email: decoded.email }] 
+    });
 
-    if (user && (await user.comparePassword(password))) {
+    if (user) {
       res.json({
         _id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
-        token: generateToken(user._id)
+        role: user.role
       });
     } else {
-      res.status(401).json({ message: 'Invalid email or password' });
+      res.status(404).json({ message: 'User profile not found. Please register first.' });
     }
   } catch (error) {
     console.error(error);

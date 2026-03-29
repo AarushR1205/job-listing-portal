@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import admin from '../config/firebase.js';
 import User from '../models/User.js';
 
 export const protect = async (req, res, next) => {
@@ -6,17 +6,18 @@ export const protect = async (req, res, next) => {
 
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
-      // Get token from header
       token = req.headers.authorization.split(' ')[1];
 
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      // Verify token with Firebase Admin
+      const decoded = await admin.auth().verifyIdToken(token);
 
-      // Get user from token
-      req.user = await User.findById(decoded.id).select('-password');
+      // Get user from MongoDB using firebaseUid or email
+      req.user = await User.findOne({ 
+        $or: [{ firebaseUid: decoded.uid }, { email: decoded.email }]
+      });
 
       if (!req.user) {
-        return res.status(401).json({ message: 'User not found' });
+        return res.status(401).json({ message: 'User profile not found in database.' });
       }
 
       next();
@@ -24,9 +25,7 @@ export const protect = async (req, res, next) => {
       console.error(error);
       return res.status(401).json({ message: 'Not authorized, token failed' });
     }
-  }
-
-  if (!token) {
+  } else {
     return res.status(401).json({ message: 'Not authorized, no token' });
   }
 };

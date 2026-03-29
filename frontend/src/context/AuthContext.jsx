@@ -1,4 +1,12 @@
 import { createContext, useState, useEffect, useContext } from 'react';
+import { auth, googleProvider } from '../config/firebase.js';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signInWithPopup,
+  signOut, 
+  onAuthStateChanged 
+} from 'firebase/auth';
 import api from '../utils/api';
 
 const AuthContext = createContext();
@@ -16,32 +24,73 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        const token = localStorage.getItem('token');
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                const token = await firebaseUser.getIdToken();
+                localStorage.setItem('token', token);
+                
+                // Retrieve the custom role-based profile
+                const storedUser = localStorage.getItem('user');
+                if (storedUser) {
+                    setUser(JSON.parse(storedUser));
+                }
+            } else {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                setUser(null);
+            }
+            setLoading(false);
+        });
 
-        if (storedUser && token) {
-            setUser(JSON.parse(storedUser));
-        }
-        setLoading(false);
+        return unsubscribe;
     }, []);
 
     const login = async (email, password) => {
-        const { data } = await api.post('/auth/login', { email, password });
-        localStorage.setItem('token', data.token);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const token = await userCredential.user.getIdToken();
+        localStorage.setItem('token', token);
+
+        const { data } = await api.post('/auth/login', { idToken: token });
         localStorage.setItem('user', JSON.stringify(data));
         setUser(data);
         return data;
     };
 
     const register = async (userData) => {
-        const { data } = await api.post('/auth/register', userData);
-        localStorage.setItem('token', data.token);
+        const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+        const token = await userCredential.user.getIdToken();
+        localStorage.setItem('token', token);
+
+        const { data } = await api.post('/auth/register', { ...userData, idToken: token });
         localStorage.setItem('user', JSON.stringify(data));
         setUser(data);
         return data;
     };
 
-    const logout = () => {
+    const loginWithGoogle = async () => {
+        const userCredential = await signInWithPopup(auth, googleProvider);
+        const token = await userCredential.user.getIdToken();
+        localStorage.setItem('token', token);
+
+        const { data } = await api.post('/auth/login', { idToken: token });
+        localStorage.setItem('user', JSON.stringify(data));
+        setUser(data);
+        return data;
+    };
+
+    const registerWithGoogle = async (userData) => {
+        const userCredential = await signInWithPopup(auth, googleProvider);
+        const token = await userCredential.user.getIdToken();
+        localStorage.setItem('token', token);
+
+        const { data } = await api.post('/auth/register', { ...userData, idToken: token });
+        localStorage.setItem('user', JSON.stringify(data));
+        setUser(data);
+        return data;
+    };
+
+    const logout = async () => {
+        await signOut(auth);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
@@ -51,7 +100,9 @@ export const AuthProvider = ({ children }) => {
         user,
         loading,
         login,
+        loginWithGoogle,
         register,
+        registerWithGoogle,
         logout,
         isAuthenticated: !!user,
         isEmployer: user?.role === 'employer',
@@ -59,5 +110,5 @@ export const AuthProvider = ({ children }) => {
         isAdmin: user?.role === 'admin'
     };
 
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 };

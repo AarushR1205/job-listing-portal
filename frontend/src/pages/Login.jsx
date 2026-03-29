@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaBriefcase } from 'react-icons/fa';
+import { FaBriefcase, FaGoogle } from 'react-icons/fa';
 
 const Login = () => {
     const [formData, setFormData] = useState({
@@ -11,7 +11,7 @@ const Login = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const { login } = useAuth();
+    const { login, loginWithGoogle } = useAuth();
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -35,7 +35,27 @@ const Login = () => {
                 navigate('/jobseeker/dashboard');
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Login failed');
+            setError(err.response?.data?.message || err.message || 'Login failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleSignIn = async () => {
+        try {
+            setError('');
+            setLoading(true);
+            const data = await loginWithGoogle();
+            
+            if (data.role === 'admin') {
+                navigate('/admin/dashboard');
+            } else if (data.role === 'employer') {
+                navigate('/employer/dashboard');
+            } else {
+                navigate('/jobseeker/dashboard');
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || err.message || 'Google Sign-In failed');
         } finally {
             setLoading(false);
         }
@@ -107,7 +127,23 @@ const Login = () => {
                         </button>
                     </form>
 
-                    <p className="mt-6 text-center text-sm text-gray-600">
+                    <div className="mt-6 flex items-center justify-center space-x-2">
+                        <span className="h-px bg-gray-300 flex-1"></span>
+                        <span className="text-gray-500 text-sm">or</span>
+                        <span className="h-px bg-gray-300 flex-1"></span>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleGoogleSignIn}
+                        disabled={loading}
+                        className="mt-6 w-full flex items-center justify-center space-x-2 bg-white text-gray-700 border border-gray-300 py-3 rounded-xl font-medium hover:bg-gray-50 transition duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <FaGoogle className="text-red-500" />
+                        <span>Sign in with Google</span>
+                    </button>
+
+                    <p className="mt-8 text-center text-sm text-gray-600">
                         Don't have an account?{' '}
                         <Link to="/register" className="font-medium text-primary-600 hover:text-primary-500">
                             Sign up

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaBriefcase } from 'react-icons/fa';
+import { FaBriefcase, FaGoogle } from 'react-icons/fa';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -17,7 +17,7 @@ const Register = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const { register } = useAuth();
+    const { register, registerWithGoogle } = useAuth();
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -54,7 +54,52 @@ const Register = () => {
                 navigate('/jobseeker/dashboard');
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed');
+            setError(err.response?.data?.message || err.message || 'Registration failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleSignUp = async () => {
+        try {
+            setError('');
+            if (!formData.name) {
+                setError('Please provide your Full Name to continue with Google.');
+                return;
+            }
+            if (formData.role === 'jobseeker' && !formData.phone) {
+                setError('Please provide your Phone Number to continue with Google.');
+                return;
+            }
+            if (formData.role === 'employer' && !formData.companyName) {
+                setError('Please provide your Company Name to continue with Google.');
+                return;
+            }
+
+            setLoading(true);
+
+            const userData = {
+                name: formData.name,
+                role: formData.role
+            };
+
+            if (formData.role === 'jobseeker') {
+                userData.phone = formData.phone;
+                userData.skills = formData.skills ? formData.skills.split(',').map(s => s.trim()) : [];
+                userData.experience = formData.experience;
+            } else {
+                userData.companyName = formData.companyName;
+            }
+
+            const data = await registerWithGoogle(userData);
+            
+            if (data.role === 'employer') {
+                navigate('/employer/dashboard');
+            } else {
+                navigate('/jobseeker/dashboard');
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || err.message || 'Google Registration failed');
         } finally {
             setLoading(false);
         }
@@ -226,7 +271,23 @@ const Register = () => {
                         </button>
                     </form>
 
-                    <p className="mt-6 text-center text-sm text-gray-600">
+                    <div className="mt-6 flex items-center justify-center space-x-2">
+                        <span className="h-px bg-gray-300 flex-1"></span>
+                        <span className="text-gray-500 text-sm">or</span>
+                        <span className="h-px bg-gray-300 flex-1"></span>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleGoogleSignUp}
+                        disabled={loading}
+                        className="mt-6 w-full flex items-center justify-center space-x-2 bg-white text-gray-700 border border-gray-300 py-3 rounded-xl font-medium hover:bg-gray-50 transition duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <FaGoogle className="text-red-500" />
+                        <span>Sign up with Google (Fill form first)</span>
+                    </button>
+
+                    <p className="mt-8 text-center text-sm text-gray-600">
                         Already have an account?{' '}
                         <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
                             Sign in
