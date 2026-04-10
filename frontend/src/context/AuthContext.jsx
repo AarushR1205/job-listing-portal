@@ -89,6 +89,24 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
+    const startGoogleSignUp = async () => {
+        const userCredential = await signInWithPopup(auth, googleProvider);
+        const token = await userCredential.user.getIdToken();
+        return {
+            name: userCredential.user.displayName || '',
+            email: userCredential.user.email || '',
+            token: token
+        };
+    };
+
+    const completeGoogleRegister = async (userData, token) => {
+        localStorage.setItem('token', token);
+        const { data } = await api.post('/auth/register', { ...userData, idToken: token });
+        localStorage.setItem('user', JSON.stringify(data));
+        setUser(data);
+        return data;
+    };
+
 
     const logout = async () => {
         await signOut(auth);
@@ -104,6 +122,8 @@ export const AuthProvider = ({ children }) => {
         loginWithGoogle,
         register,
         registerWithGoogle,
+        startGoogleSignUp,
+        completeGoogleRegister,
         logout,
         isAuthenticated: !!user,
         isEmployer: user?.role === 'employer',

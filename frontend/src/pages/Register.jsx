@@ -16,8 +16,9 @@ const Register = () => {
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [googleToken, setGoogleToken] = useState(null);
 
-    const { register, registerWithGoogle } = useAuth();
+    const { register, startGoogleSignUp, completeGoogleRegister } = useAuth();
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -45,7 +46,15 @@ const Register = () => {
                 userData.companyName = formData.companyName;
             }
 
-            const data = await register(userData);
+            // If using Google Auth, call the complete method
+            let data;
+            if (googleToken) {
+                // Ensure password isn't sent if using google
+                delete userData.password;
+                data = await completeGoogleRegister(userData, googleToken);
+            } else {
+                data = await register(userData);
+            }
 
             // Redirect based on role
             if (data.role === 'employer') {
@@ -60,46 +69,28 @@ const Register = () => {
         }
     };
 
-    const handleGoogleSignUp = async () => {
+    const handleGoogleInit = async () => {
         try {
             setError('');
-            if (!formData.name) {
-                setError('Please provide your Full Name to continue with Google.');
-                return;
-            }
-            if (formData.role === 'jobseeker' && !formData.phone) {
-                setError('Please provide your Phone Number to continue with Google.');
-                return;
-            }
-            if (formData.role === 'employer' && !formData.companyName) {
-                setError('Please provide your Company Name to continue with Google.');
-                return;
-            }
-
             setLoading(true);
 
-            const userData = {
-                name: formData.name,
-                role: formData.role
-            };
-
-            if (formData.role === 'jobseeker') {
-                userData.phone = formData.phone;
-                userData.skills = formData.skills ? formData.skills.split(',').map(s => s.trim()) : [];
-                userData.experience = formData.experience;
-            } else {
-                userData.companyName = formData.companyName;
-            }
-
-            const data = await registerWithGoogle(userData);
+            const result = await startGoogleSignUp();
             
-            if (data.role === 'employer') {
-                navigate('/employer/dashboard');
-            } else {
-                navigate('/jobseeker/dashboard');
-            }
+            // Auto-fill forms and store token
+            setFormData(prev => ({
+                ...prev,
+                name: result.name,
+                email: result.email
+            }));
+            setGoogleToken(result.token);
+            
+            // Optional UX enhancement: clear error if it was "Please fill Name"
+            setError('');
+            
         } catch (err) {
-            setError(err.response?.data?.message || err.message || 'Google Registration failed');
+            if (err.code !== 'auth/popup-closed-by-user') {
+                 setError(err.response?.data?.message || err.message || 'Google Auth failed');
+            }
         } finally {
             setLoading(false);
         }
@@ -130,6 +121,32 @@ const Register = () => {
                         </div>
                     )}
 
+                    {!googleToken && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={handleGoogleInit}
+                                disabled={loading}
+                                className="w-full mb-6 flex items-center justify-center space-x-2 bg-white text-gray-700 border border-gray-300 py-3 rounded-xl font-medium hover:bg-gray-50 transition duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <FaGoogle className="text-red-500" />
+                                <span>Continue with Google</span>
+                            </button>
+
+                            <div className="mb-6 flex items-center justify-center space-x-2">
+                                <span className="h-px bg-gray-300 flex-1"></span>
+                                <span className="text-gray-500 text-sm">or sign up with email</span>
+                                <span className="h-px bg-gray-300 flex-1"></span>
+                            </div>
+                        </>
+                    )}
+                    
+                    {googleToken && (
+                        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm text-center">
+                            Google account linked! Please complete the remaining mandatory fields below.
+                        </div>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div>
                             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -156,29 +173,32 @@ const Register = () => {
                                 name="email"
                                 type="email"
                                 required
+                                readOnly={!!googleToken}
                                 value={formData.email}
                                 onChange={handleChange}
-                                className="input-field"
+                                className={`input-field ${googleToken ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                 placeholder="you@example.com"
                             />
                         </div>
 
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                                Password
-                            </label>
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                required
-                                minLength="6"
-                                value={formData.password}
-                                onChange={handleChange}
-                                className="input-field"
-                                placeholder="••••••••"
-                            />
-                        </div>
+                        {!googleToken && (
+                            <div>
+                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Password
+                                </label>
+                                <input
+                                    id="password"
+                                    name="password"
+                                    type="password"
+                                    required
+                                    minLength="6"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    className="input-field"
+                                    placeholder="••••••••"
+                                />
+                            </div>
+                        )}
 
                         <div>
                             <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
@@ -268,25 +288,9 @@ const Register = () => {
                             disabled={loading}
                             className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {loading ? 'Creating account...' : 'Sign up'}
+                            {loading ? 'Creating account...' : 'Complete Registration'}
                         </button>
                     </form>
-
-                    <div className="mt-6 flex items-center justify-center space-x-2">
-                        <span className="h-px bg-gray-300 flex-1"></span>
-                        <span className="text-gray-500 text-sm">or</span>
-                        <span className="h-px bg-gray-300 flex-1"></span>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={handleGoogleSignUp}
-                        disabled={loading}
-                        className="mt-6 w-full flex items-center justify-center space-x-2 bg-white text-gray-700 border border-gray-300 py-3 rounded-xl font-medium hover:bg-gray-50 transition duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <FaGoogle className="text-red-500" />
-                        <span>Sign up with Google (Fill form first)</span>
-                    </button>
 
 
                     <p className="mt-8 text-center text-sm text-gray-600">

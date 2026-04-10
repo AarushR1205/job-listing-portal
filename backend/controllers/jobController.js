@@ -29,7 +29,7 @@ export const createJob = async (req, res) => {
       salaryRange,
       deadline,
       isQuizRequired,
-      quiz,
+      quiz: isQuizRequired ? quiz : [],
       employer: req.user._id
     });
 
@@ -219,7 +219,12 @@ export const updateJob = async (req, res) => {
     job.status = status || job.status;
     job.deadline = deadline || job.deadline;
     if (isQuizRequired !== undefined) job.isQuizRequired = isQuizRequired;
-    if (quiz) job.quiz = quiz;
+    
+    if (!job.isQuizRequired) {
+      job.quiz = [];
+    } else if (quiz) {
+      job.quiz = quiz;
+    }
 
     const updatedJob = await job.save();
     res.json(updatedJob);
