@@ -37,7 +37,7 @@ export const calculateATSScore = async (resumeRelativePath, job) => {
         const genAI = getGenAI();
         if (!genAI) return null;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const prompt = `
         You are an expert ATS (Applicant Tracking System) parser.

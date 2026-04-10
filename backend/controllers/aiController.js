@@ -22,7 +22,7 @@ export const generateJobDescription = async (req, res) => {
         }
 
         const genAI = getGenAI();
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const prompt = `
         You are an expert HR professional and technical recruiter.
@@ -50,7 +50,7 @@ export const generateJobDescription = async (req, res) => {
     } catch (error) {
         console.error('AI Job Description Generation Error:', error);
         res.status(500).json({ 
-            message: 'Failed to generate content. Please ensure your GEMINI_API_KEY is valid.',
+            message: `Failed to generate content: ${error.message || 'Unknown error occurred'}`,
             error: error.message 
         });
     }
@@ -68,7 +68,7 @@ export const generateCoverLetter = async (req, res) => {
         }
 
         const genAI = getGenAI();
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const prompt = `
         You are an expert career coach helping a job seeker write a highly tailored, professional cover letter for a specific job.
@@ -89,7 +89,7 @@ export const generateCoverLetter = async (req, res) => {
     } catch (error) {
         console.error('AI Cover Letter Generation Error:', error);
         res.status(500).json({ 
-            message: 'Failed to generate cover letter. Please ensure your GEMINI_API_KEY is valid.',
+            message: `Failed to generate cover letter: ${error.message || 'Unknown error occurred'}`,
             error: error.message 
         });
     }
