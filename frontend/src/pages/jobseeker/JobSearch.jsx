@@ -185,7 +185,7 @@ const JobSearch = () => {
                                                     <FaBriefcase /> {job.jobType}
                                                 </span>
                                                 <span className="flex items-center gap-1">
-                                                    <FaDollarSign /> ₹{job.salaryRange.min.toLocaleString()} - ₹{job.salaryRange.max.toLocaleString()}
+                                                    ₹ {job.salaryRange.min.toLocaleString()} LPA - {job.salaryRange.max.toLocaleString()} LPA
                                                 </span>
                                             </div>
                                             <p className="text-gray-600 line-clamp-2">{job.description}</p>

@@ -78,7 +78,7 @@ const ManageJobs = () => {
                                                 <FaMapMarkerAlt /> {job.location}
                                             </span>
                                             <span>{job.jobType}</span>
-                                            <span>₹{job.salaryRange.min.toLocaleString()} - ₹{job.salaryRange.max.toLocaleString()}</span>
+                                            <span>₹ {job.salaryRange.min.toLocaleString()} LPA - {job.salaryRange.max.toLocaleString()} LPA</span>
                                             <span className="flex items-center gap-1">
                                                 <FaUsers /> {job.applicationsCount} applicants
                                             </span>

@@ -129,7 +129,7 @@ const AdminDashboard = () => {
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-sm font-bold text-slate-700">₹{job.salaryRange ? `${job.salaryRange.min.toLocaleString()} - ${job.salaryRange.max.toLocaleString()}` : 'N/A'}</div>
+                                                    <div className="text-sm font-bold text-slate-700">₹ {job.salaryRange ? `${job.salaryRange.min.toLocaleString()} LPA - ${job.salaryRange.max.toLocaleString()} LPA` : 'N/A'}</div>
                                                     <div className="text-xs text-slate-400">{new Date(job.createdAt).toLocaleDateString()}</div>
                                                 </div>
                                             </div>

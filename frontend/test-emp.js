@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 
 // Firebase configuration from frontend/.env
 const firebaseConfig = {
@@ -18,31 +18,31 @@ const auth = getAuth(app);
 
 async function test() {
   try {
-    const email = `test${Date.now()}@test.com`;
-    console.log("Creating user:", email);
-    const userCredential = await createUserWithEmailAndPassword(auth, email, "password123");
+    const email = `employer@test.com`; // From our DB
+    console.log("Logging in user:", email);
+    const userCredential = await signInWithEmailAndPassword(auth, email, "password123");
     const token = await userCredential.user.getIdToken();
     console.log("Got token");
 
-    const res = await fetch('http://localhost:5001/api/auth/register', {
+    const res = await fetch('http://localhost:5001/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        name: "Test User",
-        email: email,
-        password: "password123",
-        role: "jobseeker",
-        phone: "1234567890",
-        skills: ["React", "Node"],
-        experience: "2 years",
         idToken: token
       })
     });
     
     const data = await res.json();
-    console.log("Response:", res.status, data);
+    console.log("Login Response:", res.status, data);
+
+    const appsRes = await fetch('http://localhost:5001/api/jobs/employer/analytics', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    console.log("Analytics Response:", appsRes.status, await appsRes.json());
   } catch (err) {
     console.log("Error:", err.message);
   }

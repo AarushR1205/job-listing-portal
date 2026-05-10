@@ -239,7 +239,7 @@ const PostJob = () => {
                         <div className="grid md:grid-cols-2 gap-6">
                             <div>
                                 <label htmlFor="minSalary" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Minimum Salary (₹) *
+                                    Minimum CTC LPA (₹) *
                                 </label>
                                 <input
                                     id="minSalary"
@@ -256,7 +256,7 @@ const PostJob = () => {
 
                             <div>
                                 <label htmlFor="maxSalary" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Maximum Salary (₹) *
+                                    Maximum Salary LPA (₹) *
                                 </label>
                                 <input
                                     id="maxSalary"

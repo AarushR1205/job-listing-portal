@@ -1,4 +1,14 @@
 import { Mistral } from '@mistralai/mistralai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// for using the Gemini api
+// const getGemini = () => {
+//     const apiKey = process.env.GEMINI_API_KEY;
+//     if (!apiKey) {
+//         throw new Error("GEMINI_API_KEY is not defined in environment variables. Please add it to your .env file.");
+//     }
+//     return new GoogleGenerativeAI(apiKey);
+// };
 
 // Initialize the Mistral API client lazily
 const getMistral = () => {
@@ -64,9 +74,9 @@ export const generateJobDescription = async (req, res) => {
     } catch (error) {
         console.error('AI Job Description Generation Error:', error);
         if (handleAIError(error, res)) return;
-        res.status(500).json({ 
+        res.status(500).json({
             message: `Failed to generate content: ${error.message || 'Unknown error occurred'}`,
-            error: error.message 
+            error: error.message
         });
     }
 };
@@ -107,9 +117,9 @@ export const generateCoverLetter = async (req, res) => {
     } catch (error) {
         console.error('AI Cover Letter Generation Error:', error);
         if (handleAIError(error, res)) return;
-        res.status(500).json({ 
+        res.status(500).json({
             message: `Failed to generate cover letter: ${error.message || 'Unknown error occurred'}`,
-            error: error.message 
+            error: error.message
         });
     }
 };

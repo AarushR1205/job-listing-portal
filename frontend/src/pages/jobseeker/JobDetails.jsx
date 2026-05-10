@@ -156,7 +156,7 @@ const JobDetails = () => {
                         <span className="flex items-center gap-2"><FaBuilding /> {job.employer?.companyName || job.employer?.name}</span>
                         <span className="flex items-center gap-2"><FaMapMarkerAlt /> {job.location}</span>
                         <span className="flex items-center gap-2"><FaBriefcase /> {job.jobType}</span>
-                        <span className="flex items-center gap-2"><FaDollarSign /> ₹{job.salaryRange.min.toLocaleString()} - ₹{job.salaryRange.max.toLocaleString()}</span>
+                        <span className="flex items-center gap-2"> ₹ {job.salaryRange.min.toLocaleString()} LPA - {job.salaryRange.max.toLocaleString()} LPA</span>
                     </div>
 
                     <div className="space-y-6">

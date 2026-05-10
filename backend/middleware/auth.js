@@ -17,15 +17,17 @@ export const protect = async (req, res, next) => {
       });
 
       if (!req.user) {
+        console.error('Auth error: User profile not found in database for uid:', decoded.uid, 'email:', decoded.email);
         return res.status(401).json({ message: 'User profile not found in database.' });
       }
 
       next();
     } catch (error) {
-      console.error(error);
+      console.error('Auth error: Token verification failed:', error);
       return res.status(401).json({ message: 'Not authorized, token failed' });
     }
   } else {
+    console.error('Auth error: No token provided');
     return res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
