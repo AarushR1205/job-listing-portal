@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../../utils/api';
-import { FaUpload, FaFileAlt } from 'react-icons/fa';
+import { FaUpload, FaFileAlt, FaTrash, FaSpinner } from 'react-icons/fa';
 
 const Profile = () => {
     const [profile, setProfile] = useState({
@@ -9,13 +9,15 @@ const Profile = () => {
         phone: '',
         skills: [],
         experience: '',
-        resume: ''
+        resumes: []
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
     const [message, setMessage] = useState({ type: '', text: '' });
     const [skillInput, setSkillInput] = useState('');
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         fetchProfile();
@@ -71,12 +73,35 @@ const Profile = () => {
             const { data } = await api.post('/auth/upload-resume', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            setProfile({ ...profile, resume: data.resume });
-            setMessage({ type: 'success', text: 'Resume uploaded successfully!' });
+            setProfile(prev => ({
+                ...prev,
+                resumes: [...(prev.resumes || []), data.resume]
+            }));
+            setMessage({ type: 'success', text: `"${file.name}" uploaded successfully!` });
+            if (fileInputRef.current) fileInputRef.current.value = '';
         } catch (error) {
             setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to upload resume' });
         } finally {
             setUploading(false);
+        }
+    };
+
+    const handleDeleteResume = async (resumeId) => {
+        if (!window.confirm('Are you sure you want to delete this resume?')) return;
+        setDeletingId(resumeId);
+        setMessage({ type: '', text: '' });
+
+        try {
+            await api.delete(`/auth/resume/${resumeId}`);
+            setProfile(prev => ({
+                ...prev,
+                resumes: prev.resumes.filter(r => r._id !== resumeId)
+            }));
+            setMessage({ type: 'success', text: 'Resume deleted.' });
+        } catch (error) {
+            setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to delete resume' });
+        } finally {
+            setDeletingId(null);
         }
     };
 
@@ -94,8 +119,7 @@ const Profile = () => {
                 <h1 className="text-3xl font-bold text-gray-900 mb-8">My Profile</h1>
 
                 {message.text && (
-                    <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
+                    <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {message.text}
                     </div>
                 )}
@@ -105,51 +129,22 @@ const Profile = () => {
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                                Full Name
-                            </label>
-                            <input
-                                id="name"
-                                name="name"
-                                type="text"
-                                value={profile.name}
-                                onChange={handleChange}
-                                className="input-field"
-                            />
+                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                            <input id="name" name="name" type="text" value={profile.name} onChange={handleChange} className="input-field" />
                         </div>
 
                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                                Email
-                            </label>
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                value={profile.email}
-                                onChange={handleChange}
-                                className="input-field"
-                            />
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                            <input id="email" name="email" type="email" value={profile.email} onChange={handleChange} className="input-field" />
                         </div>
 
                         <div>
-                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                                Phone
-                            </label>
-                            <input
-                                id="phone"
-                                name="phone"
-                                type="tel"
-                                value={profile.phone}
-                                onChange={handleChange}
-                                className="input-field"
-                            />
+                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                            <input id="phone" name="phone" type="tel" value={profile.phone} onChange={handleChange} className="input-field" />
                         </div>
 
                         <div>
-                            <label htmlFor="skills" className="block text-sm font-medium text-gray-700 mb-2">
-                                Skills (comma separated)
-                            </label>
+                            <label htmlFor="skills" className="block text-sm font-medium text-gray-700 mb-2">Skills (comma separated)</label>
                             <input
                                 id="skills"
                                 type="text"
@@ -161,9 +156,7 @@ const Profile = () => {
                         </div>
 
                         <div>
-                            <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-2">
-                                Experience
-                            </label>
+                            <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-2">Experience</label>
                             <textarea
                                 id="experience"
                                 name="experience"
@@ -175,54 +168,75 @@ const Profile = () => {
                             />
                         </div>
 
-                        <button
-                            type="submit"
-                            disabled={saving}
-                            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
+                        <button type="submit" disabled={saving} className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
                             {saving ? 'Saving...' : 'Save Changes'}
                         </button>
                     </form>
                 </div>
 
-                {/* Resume Upload */}
+                {/* Resume Management */}
                 <div className="card">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-6">Resume</h2>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">My Resumes</h2>
+                    <p className="text-sm text-gray-500 mb-6">
+                        Upload multiple resumes and select the best one when applying to a job.
+                    </p>
 
-                    {profile.resume && (
-                        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-green-700">
-                                <FaFileAlt />
-                                <span>Resume uploaded</span>
-                            </div>
-                            <a
-                                href={`http://localhost:5000/${profile.resume}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary-600 hover:text-primary-700 font-medium"
-                            >
-                                View Resume
-                            </a>
+                    {/* Resume List */}
+                    {profile.resumes && profile.resumes.length > 0 ? (
+                        <div className="space-y-3 mb-6">
+                            {profile.resumes.map((resume) => (
+                                <div
+                                    key={resume._id}
+                                    className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-xl"
+                                >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <FaFileAlt className="text-primary-500 flex-shrink-0 text-lg" />
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-medium text-gray-800 truncate">{resume.filename}</p>
+                                            <p className="text-xs text-gray-400">
+                                                {new Date(resume.uploadedAt).toLocaleDateString('en-US', {
+                                                    year: 'numeric', month: 'short', day: 'numeric'
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleDeleteResume(resume._id)}
+                                        disabled={deletingId === resume._id}
+                                        className="ml-4 flex-shrink-0 p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                                        title="Delete resume"
+                                    >
+                                        {deletingId === resume._id
+                                            ? <FaSpinner className="animate-spin" />
+                                            : <FaTrash />
+                                        }
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">
+                            ⚠️ No resumes uploaded yet. You need at least one resume to apply for jobs.
                         </div>
                     )}
 
+                    {/* Upload new resume */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Upload New Resume (PDF, DOC, DOCX)
+                            Upload New Resume <span className="text-gray-400 font-normal">(PDF, DOC, DOCX — max 5MB)</span>
                         </label>
-                        <div className="flex items-center gap-4">
-                            <label className="btn-outline cursor-pointer">
-                                <FaUpload className="inline mr-2" />
-                                {uploading ? 'Uploading...' : 'Choose File'}
-                                <input
-                                    type="file"
-                                    accept=".pdf,.doc,.docx"
-                                    onChange={handleResumeUpload}
-                                    className="hidden"
-                                    disabled={uploading}
-                                />
-                            </label>
-                        </div>
+                        <label className={`inline-flex items-center gap-2 btn-outline cursor-pointer ${uploading ? 'opacity-60 pointer-events-none' : ''}`}>
+                            {uploading ? <FaSpinner className="animate-spin" /> : <FaUpload />}
+                            {uploading ? 'Uploading...' : 'Choose File'}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".pdf,.doc,.docx"
+                                onChange={handleResumeUpload}
+                                className="hidden"
+                                disabled={uploading}
+                            />
+                        </label>
                     </div>
                 </div>
             </div>

@@ -14,6 +14,7 @@ const Register = () => {
         skills: '',
         experience: ''
     });
+    const [resumeFile, setResumeFile] = useState(null);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [googleToken, setGoogleToken] = useState(null);
@@ -22,7 +23,11 @@ const Register = () => {
     const navigate = useNavigate();
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        if (e.target.type === 'file') {
+            setResumeFile(e.target.files[0] || null);
+        } else {
+            setFormData({ ...formData, [e.target.name]: e.target.value });
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -31,32 +36,30 @@ const Register = () => {
         setLoading(true);
 
         try {
-            const userData = {
-                name: formData.name,
-                email: formData.email,
-                password: formData.password,
-                role: formData.role
-            };
+            // Build FormData for multipart (supports file upload)
+            const fd = new FormData();
+            fd.append('name', formData.name);
+            fd.append('email', formData.email);
+            if (formData.password) fd.append('password', formData.password);
+            fd.append('role', formData.role);
 
             if (formData.role === 'jobseeker') {
-                userData.phone = formData.phone;
-                userData.skills = formData.skills.split(',').map(s => s.trim());
-                userData.experience = formData.experience;
+                fd.append('phone', formData.phone);
+                fd.append('skills', formData.skills);
+                fd.append('experience', formData.experience);
+                if (resumeFile) fd.append('resume', resumeFile);
             } else {
-                userData.companyName = formData.companyName;
+                fd.append('companyName', formData.companyName);
             }
 
-            // If using Google Auth, call the complete method
             let data;
             if (googleToken) {
-                // Ensure password isn't sent if using google
-                delete userData.password;
-                data = await completeGoogleRegister(userData, googleToken);
+                fd.append('idToken', googleToken);
+                data = await completeGoogleRegister(fd, googleToken, true);
             } else {
-                data = await register(userData);
+                data = await register(fd);
             }
 
-            // Redirect based on role
             if (data.role === 'employer') {
                 navigate('/employer/dashboard');
             } else {
@@ -263,6 +266,23 @@ const Register = () => {
                                         className="input-field"
                                         placeholder="Brief description of your experience"
                                     />
+                                </div>
+
+                                <div>
+                                    <label htmlFor="resume" className="block text-sm font-medium text-gray-700 mb-2">
+                                        Resume <span className="text-gray-400 font-normal">(optional, PDF/DOC/DOCX)</span>
+                                    </label>
+                                    <input
+                                        id="resume"
+                                        name="resume"
+                                        type="file"
+                                        accept=".pdf,.doc,.docx"
+                                        onChange={handleChange}
+                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer border border-gray-300 rounded-lg p-1"
+                                    />
+                                    {resumeFile && (
+                                        <p className="mt-1 text-xs text-green-600">✓ {resumeFile.name} selected</p>
+                                    )}
                                 </div>
                             </>
                         ) : (

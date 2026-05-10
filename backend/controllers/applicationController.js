@@ -1,12 +1,13 @@
 import Application from '../models/Application.js';
 import Job from '../models/Job.js';
+import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { calculateATSScore } from '../utils/atsScoring.js';
 import sendEmail from '../utils/sendEmail.js';
 
 export const applyForJob = async (req, res) => {
   try {
-    const { jobId, coverLetter, quizAnswers } = req.body;
+    const { jobId, coverLetter, quizAnswers, resumeId } = req.body;
 
     // Check if job exists
     const job = await Job.findById(jobId);
@@ -24,26 +25,48 @@ export const applyForJob = async (req, res) => {
       return res.status(400).json({ message: 'You have already applied for this job' });
     }
 
+    // Load full user to access resumes
+    const user = await User.findById(req.user._id);
+
+    // Enforce resume requirement
+    if (!user.resumes || user.resumes.length === 0) {
+      return res.status(400).json({
+        message: 'Please upload at least one resume to your profile before applying.'
+      });
+    }
+
+    if (!resumeId) {
+      return res.status(400).json({ message: 'Please select a resume to use for this application.' });
+    }
+
+    // Validate the selected resumeId belongs to this user
+    const selectedResume = user.resumes.id(resumeId);
+    if (!selectedResume) {
+      return res.status(400).json({ message: 'Selected resume not found in your profile.' });
+    }
+
     // Evaluate quiz if required
     let finalQuizScore = null;
     if (job.isQuizRequired && job.quiz && job.quiz.length > 0) {
-        if (!quizAnswers || !Array.isArray(quizAnswers) || quizAnswers.length !== job.quiz.length) {
-            return res.status(400).json({ message: 'Please complete the required skill assessment quiz' });
+      if (!quizAnswers || !Array.isArray(quizAnswers) || quizAnswers.length !== job.quiz.length) {
+        return res.status(400).json({ message: 'Please complete the required skill assessment quiz' });
+      }
+
+      let correctAnswers = 0;
+      job.quiz.forEach((q, index) => {
+        if (q.correctAnswerIndex === quizAnswers[index]) {
+          correctAnswers++;
         }
-        
-        let correctAnswers = 0;
-        job.quiz.forEach((q, index) => {
-            if (q.correctAnswerIndex === quizAnswers[index]) {
-                correctAnswers++;
-            }
-        });
-        finalQuizScore = Math.round((correctAnswers / job.quiz.length) * 100);
+      });
+      finalQuizScore = Math.round((correctAnswers / job.quiz.length) * 100);
     }
 
-    // Calculate ATS Score async
+    // Calculate ATS Score using the selected resume
     let atsData = null;
-    if (req.user.resume) {
-        atsData = await calculateATSScore(req.user.resume, job);
+    try {
+      atsData = await calculateATSScore(selectedResume.path, job);
+    } catch (err) {
+      console.error('ATS scoring failed (non-fatal):', err.message);
     }
 
     // Create application
@@ -51,8 +74,11 @@ export const applyForJob = async (req, res) => {
       job: jobId,
       applicant: req.user._id,
       coverLetter,
+      resumeUsed: selectedResume.path,
       atsScore: atsData ? atsData.score : null,
       atsFeedback: atsData ? atsData.feedback : '',
+      matchedSkills: atsData ? atsData.matchedSkills : [],
+      missingSkills: atsData ? atsData.missingSkills : [],
       quizScore: finalQuizScore
     });
 

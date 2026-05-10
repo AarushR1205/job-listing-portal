@@ -28,6 +28,12 @@ const applicationSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  resumeUsed: {
+    type: String,
+    default: null
+  },
+  matchedSkills: [{ type: String }],
+  missingSkills: [{ type: String }],
   quizScore: {
     type: Number,
     default: null

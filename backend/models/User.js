@@ -28,10 +28,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: function() { return this.role === 'jobseeker'; }
   },
-  resume: {
-    type: String, // File path
-    default: null
-  },
+  resumes: [{
+    filename: { type: String, required: true },
+    path: { type: String, required: true },
+    uploadedAt: { type: Date, default: Date.now }
+  }],
   skills: [{
     type: String
   }],

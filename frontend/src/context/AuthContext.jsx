@@ -57,11 +57,39 @@ export const AuthProvider = ({ children }) => {
     };
 
     const register = async (userData) => {
-        const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
-        const token = await userCredential.user.getIdToken();
+        // userData can be a plain object or FormData
+        const isFormData = userData instanceof FormData;
+        const email = isFormData ? userData.get('email') : userData.email;
+        const password = isFormData ? userData.get('password') : userData.password;
+
+        let token;
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            token = await userCredential.user.getIdToken();
+        } catch (error) {
+            if (error.code === 'auth/email-already-in-use') {
+                try {
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    token = await userCredential.user.getIdToken();
+                } catch (loginError) {
+                    throw error;
+                }
+            } else {
+                throw error;
+            }
+        }
+
         localStorage.setItem('token', token);
 
-        const { data } = await api.post('/auth/register', { ...userData, idToken: token });
+        let payload;
+        if (isFormData) {
+            userData.set('idToken', token);
+            payload = userData;
+        } else {
+            payload = { ...userData, idToken: token };
+        }
+
+        const { data } = await api.post('/auth/register', payload);
         localStorage.setItem('user', JSON.stringify(data));
         setUser(data);
         return data;
@@ -101,7 +129,14 @@ export const AuthProvider = ({ children }) => {
 
     const completeGoogleRegister = async (userData, token) => {
         localStorage.setItem('token', token);
-        const { data } = await api.post('/auth/register', { ...userData, idToken: token });
+        let payload;
+        if (userData instanceof FormData) {
+            userData.set('idToken', token);
+            payload = userData;
+        } else {
+            payload = { ...userData, idToken: token };
+        }
+        const { data } = await api.post('/auth/register', payload);
         localStorage.setItem('user', JSON.stringify(data));
         setUser(data);
         return data;
